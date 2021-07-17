@@ -93,7 +93,8 @@ TEST_CASE("Better diagnostics")
 
     SECTION("Parse error")
     {
-        CHECK_THROWS_WITH_AS(json::parse(""), "[json.exception.parse_error.101] parse error at line 1, column 1: syntax error while parsing value - unexpected end of input; expected '[', '{', or a literal", json::parse_error);
+        json _;
+        CHECK_THROWS_WITH_AS(_ = json::parse(""), "[json.exception.parse_error.101] parse error at line 1, column 1: syntax error while parsing value - unexpected end of input; expected '[', '{', or a literal", json::parse_error);
     }
 
     SECTION("Regression test for https://github.com/nlohmann/json/pull/2562#pullrequestreview-574858448")
@@ -107,5 +108,70 @@ TEST_CASE("Better diagnostics")
         json j;
         j["/foo"] = {1, 2, 3};
         CHECK_THROWS_WITH_AS(j.unflatten(), "[json.exception.type_error.315] (/~1foo) values in object must be primitive", json::type_error);
+    }
+
+    SECTION("Regression test for https://github.com/nlohmann/json/issues/2838")
+    {
+        // void push_back(basic_json&& val)
+        {
+            json j_arr = json::array();
+            j_arr.push_back(json::object());
+            j_arr.push_back(json::object());
+            j_arr.push_back(json::object());
+            j_arr.push_back(json::object());
+            json j_obj = json::object();
+            j_obj["key"] = j_arr;
+        }
+
+        // void push_back(const basic_json& val)
+        {
+            json j_arr = json::array();
+            auto object = json::object();
+            j_arr.push_back(object);
+            j_arr.push_back(object);
+            j_arr.push_back(object);
+            j_arr.push_back(object);
+            json j_obj = json::object();
+            j_obj["key"] = j_arr;
+        }
+
+        // reference emplace_back(Args&& ... args)
+        {
+            json j_arr = json::array();
+            j_arr.emplace_back(json::object());
+            j_arr.emplace_back(json::object());
+            j_arr.emplace_back(json::object());
+            j_arr.emplace_back(json::object());
+            json j_obj = json::object();
+            j_obj["key"] = j_arr;
+        }
+
+        // iterator insert(const_iterator pos, const basic_json& val)
+        {
+            json j_arr = json::array();
+            j_arr.insert(j_arr.begin(), json::object());
+            j_arr.insert(j_arr.begin(), json::object());
+            j_arr.insert(j_arr.begin(), json::object());
+            j_arr.insert(j_arr.begin(), json::object());
+            json j_obj = json::object();
+            j_obj["key"] = j_arr;
+        }
+
+        // iterator insert(const_iterator pos, size_type cnt, const basic_json& val)
+        {
+            json j_arr = json::array();
+            j_arr.insert(j_arr.begin(), 2, json::object());
+            json j_obj = json::object();
+            j_obj["key"] = j_arr;
+        }
+
+        // iterator insert(const_iterator pos, const_iterator first, const_iterator last)
+        {
+            json j_arr = json::array();
+            json j_objects = {json::object(), json::object()};
+            j_arr.insert(j_arr.begin(), j_objects.begin(), j_objects.end());
+            json j_obj = json::object();
+            j_obj["key"] = j_arr;
+        }
     }
 }
